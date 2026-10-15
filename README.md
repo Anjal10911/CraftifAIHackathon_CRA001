@@ -1,6 +1,6 @@
-# Blind-Spot Watchdog for PipeGen
+# Workplace Safety Sentinel (with Blind-Spot Watchdog)
 
-**HackwithBangalore 4.0** | [Event Link](https://luma.com/5z8w42mq) | **Track 2:** PipeGen by CraftifAI (Computer Vision & Edge AI)
+**CraftifAI Physical AI Hackathon** | **Track A — PipeGen (Perception)** | **Problem Track 1:** Workplace Safety Sentinel
 
 > **Important Status Note:** CPU test harness (OpenCV HOG). Mandatory PipeGen 5-stage pipeline run & TensorRT compilation were not executed because we did not have a machine with an NVIDIA GPU.
 

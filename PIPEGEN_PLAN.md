@@ -1,6 +1,6 @@
-# PipeGen Plan: Guardian Vision (with Blind-Spot Watchdog)
+# PipeGen Plan: Workplace Safety Sentinel (with Blind-Spot Watchdog)
 
-**HackwithBangalore 4.0** | [Event Link](https://luma.com/5z8w42mq) | **Track 2:** PipeGen by CraftifAI (Computer Vision & Edge AI)
+**CraftifAI Physical AI Hackathon** | **Track A — PipeGen (Perception)** | **Problem Track 1:** Workplace Safety Sentinel
 
 > **Blueprint Notice:** All accompanying configuration files (`pipeline_ir.json` and `deepstream_app_config.txt`) are hand-written design blueprints. They were **not** generated or exported by PipeGen.
 
