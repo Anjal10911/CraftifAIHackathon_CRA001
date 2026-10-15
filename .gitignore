@@ -1,0 +1,10 @@
+incident_log.jsonl
+hazard_incidents.jsonl
+feed.jsonl
+*.mp4
+*.avi
+*.mov
+__pycache__/
+blindspot-watchdog/
+
+
