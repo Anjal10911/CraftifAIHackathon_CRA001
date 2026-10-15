@@ -1,0 +1,131 @@
+{
+  "pipeline_name": "guardian_vision_safety_sentinel",
+  "track": "Track 2: PipeGen (Computer Vision & Edge AI)",
+  "pipegen_target_version": "0.5.1",
+  "requirement_prompt": "Detect people in a video or USB camera stream. Raise an alert when a person stays inside a defined danger zone for more than 3 seconds. Output a JSON metadata feed and MQTT alerts with person count, zone status and timestamp. Show the video live with boxes and the zone drawn.",
+  "nodes": [
+    {
+      "id": "source_0",
+      "name": "Input Video / RTSP / USB Camera",
+      "type": "input",
+      "plugin": "nvurisrcbin",
+      "properties": {
+        "uri": "file:///home/user/myvideo.mp4",
+        "cudadec-memtype": 0
+      }
+    },
+    {
+      "id": "muxer_0",
+      "name": "Stream Multiplexer",
+      "type": "muxer",
+      "plugin": "nvstreammux",
+      "properties": {
+        "batch-size": 1,
+        "width": 1920,
+        "height": 1080,
+        "batched-push-timeout": 40000
+      }
+    },
+    {
+      "id": "detector_0",
+      "name": "Primary Inference (TensorRT Engine)",
+      "type": "primary_inference",
+      "plugin": "nvinfer",
+      "model": "peoplenet",
+      "properties": {
+        "config-file-path": "config_infer_primary_peoplenet.txt",
+        "model-engine-file": "model_b1_gpu0_fp16.engine",
+        "precision": "FP16 (Primary) / INT8 (Comparison)",
+        "network-type": 0
+      }
+    },
+    {
+      "id": "tracker_0",
+      "name": "Multi-Object Tracker (NvDCF)",
+      "type": "tracker",
+      "plugin": "nvtracker",
+      "properties": {
+        "tracker-width": 640,
+        "tracker-height": 384,
+        "ll-lib-file": "/opt/nvidia/deepstream/deepstream/lib/libnvds_nvmultiobjecttracker.so",
+        "ll-config-file": "config_tracker_NvDCF_perf.yml"
+      }
+    },
+    {
+      "id": "analytics_0",
+      "name": "Zone Dwell Analytics",
+      "type": "analytics",
+      "plugin": "nvdsanalytics",
+      "properties": {
+        "config-file": "config_nvdsanalytics.txt",
+        "danger_zone": {
+          "roi_coordinates": [960, 216, 1920, 1080],
+          "dwell_time_seconds": 3.0,
+          "target_class": "person",
+          "alert_mode": "persistent"
+        }
+      }
+    },
+    {
+      "id": "osd_0",
+      "name": "On-Screen Display Overlay",
+      "type": "osd",
+      "plugin": "nvdsosd",
+      "properties": {
+        "display-clock": 1,
+        "display-text": 1,
+        "display-bbox": 1
+      }
+    },
+    {
+      "id": "msgconv_0",
+      "name": "Metadata Payload Converter",
+      "type": "converter",
+      "plugin": "nvmsgconv",
+      "properties": {
+        "config": "msgconv_config.txt",
+        "payload-type": 2
+      }
+    },
+    {
+      "id": "msgbroker_0",
+      "name": "MQTT Alert Publisher",
+      "type": "output",
+      "plugin": "nvmsgbroker",
+      "properties": {
+        "proto-lib": "/opt/nvidia/deepstream/deepstream/lib/libnvds_mqtt_proto.so",
+        "conn-str": "localhost;1883",
+        "topic": "sentinel/alerts"
+      }
+    },
+    {
+      "id": "file_sink_0",
+      "name": "JSON Stream Sink",
+      "type": "output",
+      "plugin": "filesink",
+      "properties": {
+        "location": "pipegen_output/feed.jsonl"
+      }
+    },
+    {
+      "id": "watchdog_supervisor",
+      "name": "Blind-Spot Watchdog (Safety Interlock)",
+      "type": "external_supervisor",
+      "script": "watchdog.py",
+      "monitors": "file_sink_0 (feed.jsonl)",
+      "timeout_threshold_seconds": 2.0,
+      "escalation": "SYSTEM_BLIND alert upon silence"
+    }
+  ],
+  "links": [
+    {"from": "source_0", "to": "muxer_0"},
+    {"from": "muxer_0", "to": "detector_0"},
+    {"from": "detector_0", "to": "tracker_0"},
+    {"from": "tracker_0", "to": "analytics_0"},
+    {"from": "analytics_0", "to": "osd_0"},
+    {"from": "analytics_0", "to": "msgconv_0"},
+    {"from": "msgconv_0", "to": "msgbroker_0"},
+    {"from": "msgconv_0", "to": "file_sink_0"},
+    {"from": "file_sink_0", "to": "watchdog_supervisor"}
+  ]
+}

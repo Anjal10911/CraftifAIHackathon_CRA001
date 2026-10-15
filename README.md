@@ -30,6 +30,8 @@ The **Blind-Spot Watchdog** acts as an independent heartbeat and health-monitori
 | `dashboard.html` | Self-contained visual dashboard for incident log review (timeline, metrics, events table, drag & drop). |
 | `evaluate.py` | Precision / recall / false-alarm evaluation matrix generator from ground-truth CSVs. |
 | `PIPEGEN_PLAN.md` | Full architecture blueprint, requirement sentence, and GPU-day deployment runbook. |
+| `pipeline_ir.json` | Complete PipeGen Pipeline Intermediate Representation (node graph specification with nvdsanalytics and JSON sink). |
+| `deepstream_app_config.txt` | Target DeepStream / PipeGen deployment configuration. |
 | `run_demo.bat` | One-click Windows demo launcher (runs self-test simulation & generates incident log). |
 | `run_demo.sh` | One-click Linux / macOS demo launcher. |
 | `.gitignore` | Ignores runtime artifacts and heavy video files (`incident_log.jsonl`, `feed.jsonl`, `*.mp4`). |
