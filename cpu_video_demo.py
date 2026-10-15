@@ -105,6 +105,7 @@ def main():
     stride = max(1, args.stride)
 
     in_zone_since = None
+    last_seen_zone = None
     alerted = False
     frame_idx = 0
     processed = 0
@@ -152,19 +153,22 @@ def main():
             objects.append({"class": "person", "bbox": [x, y, w, h], "confidence": round(conf, 2), "in_zone": inside})
 
         if any_in_zone:
+            last_seen_zone = vt
             if in_zone_since is None:
                 in_zone_since = vt
             if not alerted and vt - in_zone_since >= args.dwell:
                 alerted = True
                 n_alerts += 1
                 rec = incident("ZONE_ALERT", dwell_s=round(vt - in_zone_since, 1), video_t=round(vt, 1),
-                               message="Person in hazard zone")
+                                message="Person in hazard zone")
                 print(f"[{rec['ts']}] ZONE_ALERT person in hazard zone for {vt - in_zone_since:.1f}s (video t={vt:.1f}s)")
         else:
-            if alerted:
-                incident("ZONE_CLEARED", video_t=round(vt, 1))
-                print(f"[{now_iso()}] ZONE_CLEARED (video t={vt:.1f}s)")
-            in_zone_since, alerted = None, False
+            # Allow up to 0.4s detector flicker tolerance (HOG single-frame miss) before clearing zone
+            if in_zone_since is not None and (last_seen_zone is None or vt - last_seen_zone >= 0.4):
+                if alerted:
+                    incident("ZONE_CLEARED", video_t=round(vt, 1))
+                    print(f"[{now_iso()}] ZONE_CLEARED (video t={vt:.1f}s)")
+                in_zone_since, alerted = None, False
 
         feed.write(json.dumps({"ts": now_iso(), "frame": frame_idx, "video_t": round(vt, 2),
                                "objects": objects, "zone_alert": alerted}) + "\n")
