@@ -68,9 +68,27 @@ class Publisher:
                 pass
 
 
+def select_file():
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+        root = tk.Tk()
+        root.withdraw()
+        root.attributes("-topmost", True)
+        path = filedialog.askopenfilename(
+            title="Select Video File to Analyze",
+            filetypes=[("Video Files", "*.mp4;*.avi;*.mov;*.mkv;*.webm"), ("All Files", "*.*")]
+        )
+        root.destroy()
+        return path if path else None
+    except Exception:
+        return None
+
+
 def main():
     ap = argparse.ArgumentParser(description="CPU workplace-safety sentinel (test tool, not PipeGen)")
-    ap.add_argument("--source", default="0", help="video file path or camera index (default 0)")
+    ap.add_argument("--source", default="myvideo.mp4", help="video file path or camera index (default myvideo.mp4)")
+    ap.add_argument("--select", action="store_true", help="open a file browser dialog to select any video file")
     ap.add_argument("--zone", default="0.5,0.2,1.0,1.0", help="hazard zone x1,y1,x2,y2 as fractions")
     ap.add_argument("--dwell", type=float, default=3.0, help="seconds in zone before ZONE_ALERT")
     ap.add_argument("--feed", default="feed.jsonl", help="per-frame JSON feed (watchdog input)")
@@ -78,6 +96,7 @@ def main():
     ap.add_argument("--out", help="write annotated video to this .mp4")
     ap.add_argument("--show", action="store_true", help="show a live window (press q to quit)")
     ap.add_argument("--realtime", action="store_true", help="pace a video file at its real speed")
+    ap.add_argument("--loop", action="store_true", help="loop video playback continuously")
     ap.add_argument("--stride", type=int, default=2, help="process every Nth frame (speed on slow CPUs)")
     ap.add_argument("--width", type=int, default=480, help="resize width used for detection")
     ap.add_argument("--max-seconds", type=float, default=0, help="stop after N seconds (0 = until end)")
@@ -85,6 +104,13 @@ def main():
     ap.add_argument("--mqtt-port", type=int, default=1883)
     ap.add_argument("--mqtt-topic", default="sentinel/alerts")
     args = ap.parse_args()
+
+    if args.select:
+        chosen = select_file()
+        if chosen:
+            args.source = chosen
+        else:
+            print("No file selected, using default source:", args.source)
 
     zx1, zy1, zx2, zy2 = parse_zone(args.zone)
     is_cam = args.source.isdigit()
@@ -100,12 +126,24 @@ def main():
 
     hog = cv2.HOGDescriptor()
     hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+    # Face/upper body cascade fallback for close-up / seated webcam views
+    face_cascade = None
+    try:
+        import os
+        c_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        if os.path.exists(c_path):
+            face_cascade = cv2.CascadeClassifier(c_path)
+    except Exception:
+        pass
+
     pub = Publisher(args.mqtt_host, args.mqtt_port, args.mqtt_topic)
 
     feed = open(args.feed, "w", encoding="utf-8")
     incidents = open(args.incidents, "a", encoding="utf-8")
     writer = None
     stride = max(1, args.stride)
+    should_loop = args.loop or (args.show and not args.out and not is_cam)
 
     in_zone_since = None
     last_seen_zone = None
@@ -115,6 +153,8 @@ def main():
     t_start = time.time()
     n_alerts = 0
     print(f"Source: {args.source} | zone={args.zone} | dwell>{args.dwell}s | feed={args.feed}")
+    if should_loop:
+        print("Loop mode active: video will loop continuously. Press 'q' in video window to exit.")
 
     def incident(event, **fields):
         rec = {"ts": now_iso(), "event": event, **fields}
@@ -126,13 +166,21 @@ def main():
     while True:
         ok, frame = cap.read()
         if not ok:
+            if should_loop:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                frame_idx = 0
+                t_start = time.time()
+                in_zone_since = None
+                last_seen_zone = None
+                alerted = False
+                continue
             break
         frame_idx += 1
         # video time: deterministic for files, wall clock for cameras
         vt = (time.time() - t_start) if is_cam else frame_idx / fps
         if args.max_seconds and vt > args.max_seconds:
             break
-        if args.realtime and not is_cam:
+        if args.realtime and not is_cam and not args.show:
             lag = vt - (time.time() - t_start)
             if lag > 0:
                 time.sleep(lag)
@@ -154,6 +202,21 @@ def main():
             inside = zx_a <= foot[0] <= zx_b and zy_a <= foot[1] <= zy_b
             any_in_zone = any_in_zone or inside
             objects.append({"class": "person", "bbox": [x, y, w, h], "confidence": round(conf, 2), "in_zone": inside})
+
+        # Close-up/seated webcam fallback if HOG found no full-body pedestrian
+        if len(objects) == 0 and face_cascade is not None:
+            gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+            faces = face_cascade.detectMultiScale(gray, scaleFactor=1.2, minNeighbors=4, minSize=(30, 30))
+            for (fx, fy, fw, fh) in faces:
+                orig_fx, orig_fy, orig_fw, orig_fh = int(fx/scale), int(fy/scale), int(fw/scale), int(fh/scale)
+                bx = max(0, orig_fx - orig_fw // 3)
+                by = orig_fy
+                bw = min(w0 - bx, int(orig_fw * 1.6))
+                bh = min(h0 - by, orig_fh * 3)
+                foot = (bx + bw // 2, min(h0 - 1, by + bh))
+                inside = zx_a <= foot[0] <= zx_b and zy_a <= foot[1] <= zy_b
+                any_in_zone = any_in_zone or inside
+                objects.append({"class": "person", "bbox": [bx, by, bw, bh], "confidence": 0.88, "in_zone": inside})
 
         if any_in_zone:
             last_seen_zone = vt
@@ -193,7 +256,8 @@ def main():
                 writer.write(vis)
             if args.show:
                 cv2.imshow("Sentinel (q to quit)", vis)
-                if cv2.waitKey(1) & 0xFF == ord("q"):
+                delay = 33 if args.realtime else 1
+                if cv2.waitKey(delay) & 0xFF == ord("q"):
                     break
 
     cap.release()

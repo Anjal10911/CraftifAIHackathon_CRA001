@@ -311,13 +311,14 @@ tr:hover td { background: var(--card-hover); }
     <span class="file-note" id="file-status">Files are parsed locally in browser.</span>
   </div>
 
-  <div id="video-section" style="display:none; margin-bottom: 20px;" class="timeline-card">
-    <h2>Annotated Video Player (Detections & Zone Alerts)</h2>
-    <video id="player" controls style="width: 100%; max-height: 420px; border-radius: 8px; background: #000; outline: none; margin-top: 8px;"></video>
+  <div id="video-section" class="timeline-card">
+    <h2>Annotated Detection Video (Boxes & Hazard Alerts)</h2>
+    <p class="sub" style="margin-bottom: 10px;">Rendered video showing person detections, hazard dwell times, and <strong>ZONE ALERT</strong> interlocks.</p>
+    <video id="player" controls src="annotated.mp4" style="width: 100%; max-height: 440px; border-radius: 8px; background: #000; outline: none;"></video>
   </div>
 
   <div class="drop-zone" id="drop-zone">
-    <p class="drop-text">Drag & drop your <strong>incident_log.jsonl</strong>, <strong>hazard_incidents.jsonl</strong>, or <strong>annotated.mp4</strong> here.</p>
+    <p class="drop-text">Drag & drop your <strong>incident_log.jsonl</strong>, <strong>hazard_incidents.jsonl</strong>, or any <strong>.mp4</strong> video here.</p>
   </div>
 
   <div class="banner" id="sim">

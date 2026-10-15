@@ -25,7 +25,8 @@ The **Blind-Spot Watchdog** acts as an independent heartbeat and health-monitori
 | File | Purpose |
 |---|---|
 | `watchdog.py` | Core watchdog process (Python standard library only; optional `paho-mqtt`). Monitors feed heartbeat and logs `SYSTEM_BLIND` / `RECOVERED`. |
-| `cpu_video_demo.py` | CPU safety sentinel (OpenCV HOG). Detects persons, checks hazard zone dwell times, emits `feed.jsonl` and `hazard_incidents.jsonl`. |
+| `cpu_video_demo.py` | CPU safety sentinel (OpenCV HOG + face/torso detector). Detects persons, checks hazard zone dwell times, emits `feed.jsonl` and `hazard_incidents.jsonl`. |
+| `choose_and_run_video.bat` | Select ANY video from your computer via file picker dialog (or drag & drop any video onto it). |
 | `dashboard.html` | Self-contained visual dashboard for incident log review (timeline, metrics, events table, drag & drop). |
 | `evaluate.py` | Precision / recall / false-alarm evaluation matrix generator from ground-truth CSVs. |
 | `PIPEGEN_PLAN.md` | Full architecture blueprint, requirement sentence, and GPU-day deployment runbook. |
