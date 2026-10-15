@@ -303,14 +303,21 @@ tr:hover td { background: var(--card-hover); }
   </header>
 
   <div class="action-bar">
-    <label class="btn" for="f">Load incident_log.jsonl</label>
+    <label class="btn" for="f">Load Incident Log (.jsonl)</label>
     <input id="f" type="file" accept=".jsonl,.json,.txt">
+    <label class="btn alt" for="vid-input">Preview Video (.mp4)</label>
+    <input id="vid-input" type="file" accept="video/mp4,video/*">
     <button class="alt" id="demo">Load Simulated Demo</button>
     <span class="file-note" id="file-status">Files are parsed locally in browser.</span>
   </div>
 
+  <div id="video-section" style="display:none; margin-bottom: 20px;" class="timeline-card">
+    <h2>Annotated Video Player (Detections & Zone Alerts)</h2>
+    <video id="player" controls style="width: 100%; max-height: 420px; border-radius: 8px; background: #000; outline: none; margin-top: 8px;"></video>
+  </div>
+
   <div class="drop-zone" id="drop-zone">
-    <p class="drop-text">Drag & drop your <strong>incident_log.jsonl</strong> here, or use the button above.</p>
+    <p class="drop-text">Drag & drop your <strong>incident_log.jsonl</strong>, <strong>hazard_incidents.jsonl</strong>, or <strong>annotated.mp4</strong> here.</p>
   </div>
 
   <div class="banner" id="sim">
@@ -450,8 +457,25 @@ function show(ev, sim, filename) {
   render(ev);
 }
 
+function loadVideo(file) {
+  if (!file) return;
+  var player = document.getElementById("player");
+  player.src = URL.createObjectURL(file);
+  document.getElementById("video-section").style.display = "block";
+  document.getElementById("file-status").textContent = "Loaded Video: " + file.name;
+  player.play();
+}
+
+document.getElementById("vid-input").addEventListener("change", function(e) {
+  loadVideo(e.target.files[0]);
+});
+
 function handleFile(file) {
   if (!file) return;
+  if (file.type.indexOf("video") !== -1 || file.name.endsWith(".mp4")) {
+    loadVideo(file);
+    return;
+  }
   var r = new FileReader();
   r.onload = function() {
     show(parse(String(r.result)), false, file.name);
