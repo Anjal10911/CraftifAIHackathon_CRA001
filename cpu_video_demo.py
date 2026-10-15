@@ -88,7 +88,10 @@ def main():
 
     zx1, zy1, zx2, zy2 = parse_zone(args.zone)
     is_cam = args.source.isdigit()
-    cap = cv2.VideoCapture(int(args.source) if is_cam else args.source)
+    if is_cam and sys.platform == "win32":
+        cap = cv2.VideoCapture(int(args.source), cv2.CAP_DSHOW)
+    else:
+        cap = cv2.VideoCapture(int(args.source) if is_cam else args.source)
     if not cap.isOpened():
         sys.exit(f"Could not open source: {args.source}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
