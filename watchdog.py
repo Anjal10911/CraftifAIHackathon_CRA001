@@ -2,17 +2,18 @@
 """
 Blind-Spot Watchdog
 -------------------
-Watches the output of a PipeGen/DeepStream pipeline (a JSON/JSONL file, or a
-folder of JSON metadata files) and raises a SYSTEM BLIND alert if the pipeline
+Watches the output of a safety vision pipeline (such as PipeGen by CraftifAI or DeepStream)
+via a JSON/JSONL file or folder, and raises a SYSTEM BLIND alert if the pipeline
 stops producing output (camera unplugged, pipeline crashed, stream frozen).
 
-It also logs detection changes (e.g. number of 'person' objects) and writes
+It also tracks detection changes (e.g. 'person' counts) by inspecting standard
+dictionary keys ('class', 'label', 'name') in a schema-agnostic manner, and writes
 every event to an incident log (JSONL). Optional MQTT publishing.
 
 Runs on any laptop, no GPU needed. Standard library only (paho-mqtt optional).
 
 Usage:
-  python3 watchdog.py --path /path/to/pipegen/output --timeout 3
+  python3 watchdog.py --path /path/to/pipeline/output --timeout 3
   python3 watchdog.py --path feed.jsonl --target person --mqtt-host localhost
   python3 watchdog.py --demo        # self-test with a SIMULATED feed (not PipeGen data)
 """
